@@ -1,15 +1,5 @@
 [
   {
-    "text": "đi bơi",
-    "done": true,
-    "priority": 1,
-    "due_dt": "2025-10-31 14:30",
-    "created_at": "2025-10-31T22:44:47",
-    "done_at": "2025-11-13T01:03:10",
-    "note": null,
-    "notified": false
-  },
-  {
     "text": "chạy bộ",
     "done": true,
     "priority": 0,
@@ -37,7 +27,7 @@
     "note": null,
     "created_at": "2025-11-13T01:06:01",
     "done_at": null,
-    "notified": false
+    "notified": true
   },
   {
     "text": "Học bài",

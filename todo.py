@@ -637,8 +637,7 @@ class Main(QtWidgets.QMainWindow):
         bell_layout.setSpacing(4)
         bell_layout.setContentsMargins(0, 0, 0, 0)
 
-        self.bell_button = QtWidgets.QToolButton()
-        self.bell_button.setText("🔔") # Biểu tượng chuông
+        self.bell_button = QtWidgets.QPushButton("Thông báo")
         self.bell_button.setProperty("secondary", True) # Dùng style nút phụ
         self.bell_button.setToolTip("Thông báo")
         self.bell_button.clicked.connect(self.show_app_notifications) # Kết nối
