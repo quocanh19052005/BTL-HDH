@@ -219,24 +219,25 @@ QProgressBar::chunk {
 """
 
 def now_iso():
+    #Lấy thời gian hiện tại (ngay bây giờ) và định dạng nó thành một chuỗi (string) theo chuẩn ISO 8601.
     return datetime.now().isoformat(timespec="seconds")
 
-
+#Tìm ngày đầu tuần (Thứ Hai) của một ngày 'd' bất kỳ được cung cấp.
 def start_of_week(d: date) -> date:
     return d - timedelta(days=d.weekday())
 
-
+#Tìm ngày cuối tuần (Chủ Nhật) của một ngày 'd' bất kỳ được cung cấp.
 def end_of_week(d: date) -> date:
     return start_of_week(d) + timedelta(days=6)
 
-
+#Chuyển đổi (parse) một chuỗi (string) 's' thành đối tượng datetime.
 def parse_dt(s):
     try:
         return datetime.strptime(s, DT_FMT) if s else None
     except Exception:
         return None
 
-
+#Chuyển đổi một chuỗi (string) 's' thành đối tượng QDateTime của PyQt.
 def qdatetime_from_str(s):
     if not s:
         return QtCore.QDateTime.currentDateTime()
@@ -254,13 +255,13 @@ def qdatetime_from_str(s):
         QtCore.QTime(dt.hour, dt.minute, dt.second)
     )
 
-
+#Định dạng (format) một đối tượng QDateTime 'dt' thành một chuỗi (string) chuẩn mà ứng dụng sử dụng (theo QT_DT_FMT).
 def format_qdatetime(dt: QtCore.QDateTime) -> str:
     if not dt or not dt.isValid():
         return ""
     return dt.toString(QT_DT_FMT)
 
-
+#Khởi tạo lớp Store.
 class Store:
     def __init__(self, path):
         self.path = path
@@ -280,7 +281,8 @@ class Store:
         it.setdefault("note", None)
         it.setdefault("notified", False)
         return it
-
+    
+#Tải dữ liệu từ file JSON vào self.items.
     def load(self):
         if not os.path.exists(self.path):
             self.items = []
@@ -294,7 +296,7 @@ class Store:
             self.items = []
             QtWidgets.QMessageBox.warning(None, "Lỗi đọc dữ liệu",
                                           f"Không thể đọc tệp {os.path.basename(self.path)}:\n{e}")
-
+#"""Lưu dữ liệu từ self.items vào file JSON."""
     def save(self):
         try:
             if os.path.exists(self.path):
@@ -304,8 +306,9 @@ class Store:
         except Exception as e:
             QtWidgets.QMessageBox.critical(None, "Lỗi lưu", str(e))
 
-
+#  LỚP HỘP THOẠI (DIALOG) ĐỂ THÊM/SỬA CÔNG VIỆC 
 class TaskDialog(QtWidgets.QDialog):
+    #Khởi tạo hộp thoại.
     def __init__(self, parent=None, *, title="Thêm công việc", task=None):
         super().__init__(parent)
         self.setWindowTitle(title)
@@ -393,7 +396,7 @@ class TaskDialog(QtWidgets.QDialog):
         note = self.note_edit.toPlainText().strip() or None
         return {"text": text, "priority": priority, "due_dt": due, "note": note}
 
-
+# --- LỚP CỬA SỔ CHÍNH CỦA ỨNG DỤNG ---
 class Main(QtWidgets.QMainWindow):
     def __init__(self):
         super().__init__()
@@ -427,11 +430,16 @@ class Main(QtWidgets.QMainWindow):
         self.tab_week = QtWidgets.QWidget()
         tabs.addTab(self.tab_week, "Trong tuần")
         self._build_tab_week()
+        # === THÊM KHỐI CODE NÀY VÀO ===
+        #  # ==== Tab 4: Quá hạn ====
+        self.tab_overdue = QtWidgets.QWidget()
+        tabs.addTab(self.tab_overdue, "Quá hạn")
+        self._build_tab_overdue() # Hàm này sẽ được tạo ở Bước 3
 
         self.refresh_all()
 
-        # === KHỐI CODE THÔNG BÁO HỆ THỐNG CỦA BẠN ===
-        # 1. Thiết lập System Tray Icon
+        # === KHỐI CODE THÔNG BÁO HỆ THỐNG  ===
+        
         self.tray_icon = None
         if QtWidgets.QSystemTrayIcon.isSystemTrayAvailable():
             self.tray_icon = QtWidgets.QSystemTrayIcon(self)
@@ -631,8 +639,8 @@ class Main(QtWidgets.QMainWindow):
         header_layout.addLayout(info_box)
         header_layout.addStretch()
 
-        # === KHỐI CODE NÚT CHUÔNG MỚI ===
-        # (Bạn đã thêm phần này đúng rồi)
+        # === KHỐI CODE THÔNG BÁO ===
+       
         bell_layout = QtWidgets.QHBoxLayout()
         bell_layout.setSpacing(4)
         bell_layout.setContentsMargins(0, 0, 0, 0)
@@ -979,6 +987,52 @@ class Main(QtWidgets.QMainWindow):
         self.week_tbl.setShowGrid(False)
         card_layout.addWidget(self.week_tbl)
         L.addWidget(week_card, 1)
+    # ---------------- Tab 4 ----------------
+    def _build_tab_overdue(self):
+        """Xây dựng giao diện cho Tab 4 (Quá hạn)."""
+        L = QtWidgets.QVBoxLayout(self.tab_overdue)
+        L.setContentsMargins(24, 24, 24, 24)
+        L.setSpacing(18)
+
+        card = self._create_card()
+        card_layout = QtWidgets.QVBoxLayout(card)
+        card_layout.setContentsMargins(20, 20, 20, 20)
+        card_layout.setSpacing(16)
+
+        # Header (chỉ có Tiêu đề và Nhãn đếm)
+        head = QtWidgets.QHBoxLayout()
+        title = QtWidgets.QLabel("Công việc quá hạn")
+        title.setObjectName("cardTitle")
+        head.addWidget(title)
+        head.addStretch()
+        
+        # Nhãn đếm số việc quá hạn
+        self.overdue_count_label = QtWidgets.QLabel("0 việc")
+        self.overdue_count_label.setObjectName("cardSubtitle")
+        head.addSpacing(12)
+        head.addWidget(self.overdue_count_label)
+        card_layout.addLayout(head)
+
+        # Bảng (Table) hiển thị công việc
+        self.overdue_tbl = QtWidgets.QTableWidget(0, 4) # 0 hàng, 4 cột
+        self.overdue_tbl.setHorizontalHeaderLabels(["HẠN CHÓT","NỘI DUNG","ƯU TIÊN","TRẠNG THÁI"])
+        
+        self.overdue_tbl.setSelectionMode(QtWidgets.QAbstractItemView.NoSelection)
+        self.overdue_tbl.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
+        self.overdue_tbl.setAlternatingRowColors(True)
+        self.overdue_tbl.verticalHeader().setVisible(False)
+        
+        header = self.overdue_tbl.horizontalHeader()
+        # Chế độ co giãn cột
+        header.setSectionResizeMode(0, QtWidgets.QHeaderView.ResizeToContents) # Cột HẠN CHÓT
+        header.setSectionResizeMode(1, QtWidgets.QHeaderView.Stretch)           # Cột NỘI DUNG
+        header.setSectionResizeMode(2, QtWidgets.QHeaderView.ResizeToContents) # Cột ƯU TIÊN
+        header.setSectionResizeMode(3, QtWidgets.QHeaderView.ResizeToContents) # Cột TRẠNG THÁI
+        
+        self.overdue_tbl.setWordWrap(True)
+        self.overdue_tbl.setShowGrid(False)
+        card_layout.addWidget(self.overdue_tbl)
+        L.addWidget(card, 1)
 
     # ---------------- CRUD ----------------
     def add_item(self):
@@ -1305,12 +1359,73 @@ class Main(QtWidgets.QMainWindow):
                 
         self.week_tbl.resizeRowsToContents()
         self.week_count_label.setText(f"{len(rows)} việc" if rows else "Không có việc")
+    # ---------------- Overdue view ----------------
+    def refresh_overdue(self):
+        """Làm mới QTableWidget ở Tab 4 (Quá hạn)."""
+        now = datetime.now() # Lấy thời gian hiện tại
+        
+        rows = [] # Danh sách các hàng (row)
+        
+        # Lọc các công việc
+        for it in self.store.items:
+            # Bỏ qua nếu việc đã xong
+            if it.get("done"):
+                continue
+                
+            dt = parse_dt(it.get("due_dt"))
+            
+            # Đây chính là logic tìm việc quá hạn:
+            # (Có hạn chót) VÀ (hạn chót < bây giờ)
+            if dt and dt < now:
+                # Lưu lại (datetime, item, is_overdue=True)
+                rows.append((dt, it, True))
+                
+        # Sắp xếp theo hạn chót (cũ nhất, quá hạn lâu nhất lên đầu)
+        rows.sort(key=lambda x: x[0])
+        self.overdue_tbl.setRowCount(0) # Xoá bảng cũ
+        
+        # Thêm lại dữ liệu vào bảng
+        for dt, it, is_overdue in rows:
+            r = self.overdue_tbl.rowCount()
+            self.overdue_tbl.insertRow(r)
+            
+            # Giá trị cho 4 cột: ["HẠN CHÓT","NỘI DUNG","ƯU TIÊN","TRẠNG THÁI"]
+            vals = [
+                dt.strftime("%d/%m/%Y %H:%M"), # Hiển thị đầy đủ ngày giờ
+                it["text"],
+                {0: "Thấp", 1: "Thường", 2: "Cao"}.get(int(it.get("priority", 1)), "Thường"),
+                "Quá hạn" # Trạng thái luôn là "Quá hạn"
+            ]
+            
+            for c, v in enumerate(vals):
+                item = QtWidgets.QTableWidgetItem(v)
+                
+                # Căn lề
+                if c == 1: # Cột Nội dung
+                    item.setTextAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter)
+                    note = it.get("note")
+                    if note:
+                        item.setToolTip(note) # Thêm tooltip ghi chú
+                else:
+                    item.setTextAlignment(QtCore.Qt.AlignCenter)
+                
+                # Thêm màu đỏ cho cột HẠN CHÓT (c=0) và TRẠNG THÁI (c=3)
+                if c == 0 or c == 3:
+                    item.setForeground(QtGui.QBrush(QtGui.QColor("#e03131"))) # Màu đỏ
+                
+                self.overdue_tbl.setItem(r, c, item)
+                
+        self.overdue_tbl.resizeRowsToContents() # Tự động điều chỉnh chiều cao hàng
+        
+        # Cập nhật nhãn đếm
+        self.overdue_count_label.setText(f"{len(rows)} việc" if rows else "Không có việc")
 
 
     def refresh_all(self):
         self.refresh_list()
         self.refresh_day()
         self.refresh_week()
+        self.refresh_overdue() # <-- THÊM DÒNG NÀY
 
     def show_notification(self, title, message):
         """Hiển thị thông báo qua system tray."""
